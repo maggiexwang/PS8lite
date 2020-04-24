@@ -29,6 +29,7 @@ library(tidyverse)
 library(janitor)
 library(skimr)
 library(randomForest)
+library(caret)
 
 # Set seed value of random number generator here:
 set.seed(76)
@@ -184,12 +185,38 @@ MiscVal + MoSold + YrSold" %>%
 
 # Fit a Random Forest model
 
-Fit one Random Forest model `model_rf` using any approach you want.
+Note that `caret::train` was used to find optimal `mtry`, which turned out to be 19. Process was commented out because it takes a bit of time to run/knit.
 
 ```{r}
+#following code references random_forests.Rmd by Albert Kim for SDS293
 
+# #perform cross-validation to find best mtry with `caret
+#fit_control <- trainControl(method = "cv", number = 10)
+#mtry <- 2:36
+#tunegrid <- expand.grid(.mtry = mtry)
+
+# #fit model
+# model_rf_caret <- caret::train(
+#   form = model_formula,
+#   data = training,
+#   method = "rf",
+#   metric = "RMSE",
+#   trControl = fit_control,
+#   tunegrid = tunegrid
+# )
+# 
+# model_rf_caret
 ```
 
+```{r}
+#fit RF using the optimal mtry=19 found under cross-validation
+model_rf <- randomForest(
+  form = model_formula,
+  data = training,
+  mtry = 19,
+  ntree = 100
+)
+```
 
 
 ***
@@ -201,9 +228,16 @@ Fit one Random Forest model `model_rf` using any approach you want.
 Using `model_rf` make predictions and submit to Kaggle.
 
 ```{r}
-
+test <- test %>% 
+  mutate(
+    logSalePrice_hat_rf = predict(object = model_rf, newdata = test),
+    SalePrice_hat_rf = exp(logSalePrice_hat_rf)-1
+  )
+submission_rf <- test %>% 
+  select(Id, SalePrice = SalePrice_hat_rf)
+write_csv(submission_rf, "submission_rf.csv")
 ```
 
 
-![](images/score_screenshot_naive.png){ width=100% }
+![](images/score_screenshot_rf.png){ width=100% }
 
